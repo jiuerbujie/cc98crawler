@@ -6,6 +6,7 @@ import sys
 import os
 import re
 import shutil
+from hashlib import md5
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
@@ -20,17 +21,24 @@ def cc98GetLinks(params):
     ## get cookie
     # if cookieFile is not defined, use 'username' and 'password' in config file
     if not params.cookieFile.strip():
-        filename = '98cookie.txt'
-        cookie = cookielib.MozillaCookieJar(filename)
+        
+        cookie = cookielib.MozillaCookieJar('98cookie.txt')
         opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookie))
-        postdata = urllib.urlencode({
-            params.form_user:params.username,
-            params.form_pwd:params.password,
-            'User-Agent':'Mozilla/4.0 (compatible; MSIE 5.5; Windows NT)'})
+        postdata = {
+            'a': 'i',
+            'u':params.username,
+            'p':md5(params.password.encode()).hexdigest(),
+            'userhidden':'2',
+            'Agent-User': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.48 Safari/537.36',
+            'Origin': 'http://www.cc98.org',
+            'Referer': 'http://www.cc98.org/index.asp'}
+        postdata = urllib.urlencode(postdata)
         result = opener.open(params.loginUrl, postdata)
+        print result.read().decode('utf-8')
         cookie.save(ignore_discard=True, ignore_expires=True)
     else:
-        cookie = cookielib.MozillaCookieJar('98cookie.txt')
+        cookie = cookielib.MozillaCookieJar()
+        cookie.load(filename=params.cookieFile, ignore_discard=True, ignore_expires=True)
         opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookie))
     # open board url
     for page in range(1, params.nPage+1):
@@ -74,10 +82,13 @@ def saveData(targets, params):
         os.makedirs(params.savePath)
         
     k = 0
+    fid = open(params.savePath + 'urlinfo.txt', 'w')
     for targetPost in targets:
         for target in targetPost:
+            fid.write(str(k) + ' ' + target.postUrl + '\n')
             filename = params.savePath + str(k) + '.jpg'
             urllib.urlretrieve(target.url, filename)
             k = k + 1
+    fid.close()
         
         
